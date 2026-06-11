@@ -1,0 +1,11 @@
+* text=auto eol=lf
+
+# Keep the wrapper jar binary
+*.jar binary
+
+# Shell scripts must stay LF
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Windows batch stays CRLF
+*.bat text eol=crlf

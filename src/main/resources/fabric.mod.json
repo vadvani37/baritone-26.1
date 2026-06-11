@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "automine",
+  "version": "${version}",
+  "name": "AutoMine (Baritone-style)",
+  "description": "Client-side A* pathfinding / auto-mining bot inspired by Baritone, for Minecraft 26.1.",
+  "authors": ["you"],
+  "contact": {
+    "homepage": "https://github.com/cabaletta/baritone"
+  },
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.automine.AutoMineMod"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.4",
+    "minecraft": ">=26.1",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
