@@ -12,16 +12,17 @@ import com.automine.utils.BlockUtils;
 import com.automine.utils.WorldScanner;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
 
 /**
- * {@code #goto <x> <y> <z>} | {@code #goto <x> <z>} | {@code #goto <y>} | {@code #goto <block>}.
- * Supports {@code ~} for player-relative coordinates.
+ * {@code #goto <x> <y> <z>} | {@code #goto <x> <z>} | {@code #goto <y>} | {@code #goto <block>}
+ * | {@code #goto player [name]}. Supports {@code ~} for player-relative coordinates.
  */
 public class GotoCommand extends Command {
 
     public GotoCommand() {
-        super("Path to coordinates, a Y level, or the nearest block of a type.", "goto");
+        super("Path to coordinates, a Y level, the nearest block, or a player.", "goto");
     }
 
     @Override
@@ -31,6 +32,24 @@ public class GotoCommand extends Command {
             throw new CommandException("No player.");
         }
         BlockPos self = mc.player.blockPosition();
+
+        // #goto player [name] -> path to that player's CURRENT position (one-shot; use #follow to track).
+        if (args.hasAny() && (args.peek().equalsIgnoreCase("player") || args.peek().equalsIgnoreCase("p"))) {
+            args.getString(); // consume "player"
+            String name = args.hasAny() ? args.getString() : null;
+            Player target = findPlayer(mc, name);
+            if (target == null) {
+                throw new CommandException(name == null
+                        ? "No other players in range."
+                        : "Player '" + name + "' not found in range.");
+            }
+            BlockPos p = target.blockPosition();
+            AutoMineMod.pathing().setGoalAndPath(new GoalNear(p.getX(), p.getY(), p.getZ(), 2));
+            logDirect("Pathing to §b" + target.getName().getString() + "§r at §a"
+                    + p.getX() + " " + p.getY() + " " + p.getZ() + "§r §7(#follow player to keep tracking)");
+            return;
+        }
+
         int n = args.size();
 
         if (n == 1) {
@@ -63,6 +82,32 @@ public class GotoCommand extends Command {
         } else {
             throw new CommandException("Usage: #goto <x> <y> <z> | <x> <z> | <y> | <block>");
         }
+    }
+
+    /** Finds a player by name (case-insensitive), or the nearest other player if name is null. */
+    private static Player findPlayer(Minecraft mc, String name) {
+        if (mc.level == null) {
+            return null;
+        }
+        Player best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (Player pl : mc.level.players()) {
+            if (pl == mc.player) {
+                continue;
+            }
+            if (name != null) {
+                if (pl.getName().getString().equalsIgnoreCase(name)) {
+                    return pl;
+                }
+            } else {
+                double d = pl.distanceToSqr(mc.player);
+                if (d < bestDist) {
+                    bestDist = d;
+                    best = pl;
+                }
+            }
+        }
+        return best;
     }
 
     private static boolean isCoord(String s) {
