@@ -46,4 +46,43 @@ public final class WorldScanner {
         }
         return best;
     }
+
+    /**
+     * Finds the nearest column whose biome matches {@code biomeId} (e.g. "desert" or
+     * "minecraft:plains") within loaded chunks. Biomes are stored per 4x4x4 cell, so we sample
+     * every 4 blocks at the player's Y — plenty of resolution, far cheaper than every block.
+     * Client-side, this only sees chunks the server has actually sent you.
+     */
+    public static BlockPos nearestBiome(String biomeId, int radius) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) {
+            return null;
+        }
+        String want = biomeId.contains(":") ? biomeId : "minecraft:" + biomeId;
+        BlockPos origin = mc.player.blockPosition();
+        int y = origin.getY();
+        BlockPos best = null;
+        double bestDistSq = Double.MAX_VALUE;
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        for (int dx = -radius; dx <= radius; dx += 4) {
+            for (int dz = -radius; dz <= radius; dz += 4) {
+                int wx = origin.getX() + dx;
+                int wz = origin.getZ() + dz;
+                if (!mc.level.hasChunk(wx >> 4, wz >> 4)) {
+                    continue;
+                }
+                cursor.set(wx, y, wz);
+                String id = mc.level.getBiome(cursor).unwrapKey()
+                        .map(k -> k.identifier().toString()).orElse("");
+                if (id.equals(want)) {
+                    double d = origin.distSqr(cursor);
+                    if (d < bestDistSq) {
+                        bestDistSq = d;
+                        best = cursor.immutable();
+                    }
+                }
+            }
+        }
+        return best;
+    }
 }

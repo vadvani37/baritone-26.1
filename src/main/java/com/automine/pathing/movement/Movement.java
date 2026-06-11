@@ -63,12 +63,11 @@ public abstract class Movement {
         InputOverrideHandler input = AutoMineMod.inputHandler();
         input.clearAll();
 
-        // 1) Clear obstructions first.
+        // 1) Clear obstructions first — raycast-break so the correct face/reach is used.
         for (BetterBlockPos breakPos : toBreak) {
             if (!isPassable(mc, breakPos)) {
-                lookAt(player, breakPos);
                 input.setInput(Input.CLICK_LEFT, true); // mine
-                mineBlock(mc, breakPos);
+                com.automine.control.BlockBreaker.mineTowards(mc, breakPos);
                 return MovementStatus.RUNNING;
             }
         }

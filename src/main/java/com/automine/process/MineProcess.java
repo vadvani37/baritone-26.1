@@ -1,12 +1,11 @@
 package com.automine.process;
 
 import com.automine.AutoMineMod;
+import com.automine.control.BlockBreaker;
 import com.automine.goals.GoalNear;
 import com.automine.utils.Helper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -69,30 +68,22 @@ public final class MineProcess {
             return; // nothing in range; keep scanning
         }
 
-        double dist = Math.sqrt(mc.player.distanceToSqr(
-                currentTarget.getX() + 0.5, currentTarget.getY() + 0.5, currentTarget.getZ() + 0.5));
+        double dist = mc.player.getEyePosition(1.0f)
+                .distanceTo(net.minecraft.world.phys.Vec3.atCenterOf(currentTarget));
         if (dist <= REACH) {
-            // In reach: mine it directly.
-            AutoMineMod.pathing().cancel(); // stop walking, hold position
-            mineDirectly(mc, currentTarget);
+            // Close enough to dig toward it: hold position and break whatever the crosshair hits.
+            // If the ore is buried, the raycast hits the blocking dirt/stone first and clears it,
+            // tunnelling straight to the ore (and gravity carries us down as we dig).
+            AutoMineMod.pathing().cancel();
+            BlockBreaker.mineTowards(mc, currentTarget);
         } else {
-            // Walk adjacent to it.
+            // Too far to reach: pathfind toward it. The path's movements break blocks en route,
+            // so it tunnels through anything in the way until the ore comes within reach.
             if (!(AutoMineMod.pathing().getGoal() instanceof GoalNear g)
                     || g.x != currentTarget.getX() || g.y != currentTarget.getY() || g.z != currentTarget.getZ()) {
                 AutoMineMod.pathing().setGoalAndPath(
                         new GoalNear(currentTarget.getX(), currentTarget.getY(), currentTarget.getZ(), 1));
             }
-        }
-    }
-
-    private void mineDirectly(Minecraft mc, BlockPos pos) {
-        var rot = com.automine.utils.RotationUtils.calcRotationFromVec3d(mc.player.getEyePosition(1.0f), pos);
-        mc.player.setYRot(rot.yaw());
-        mc.player.yHeadRot = rot.yaw();
-        mc.player.setXRot(rot.pitch());
-        if (mc.gameMode != null) {
-            mc.gameMode.continueDestroyBlock(pos, Direction.UP);
-            mc.player.swing(InteractionHand.MAIN_HAND);
         }
     }
 

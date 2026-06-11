@@ -12,6 +12,6 @@ public class VersionCommand extends Command {
 
     @Override
     public void execute(String label, ArgConsumer args) {
-        logDirect("AutoMine 1.0.0 (Baritone-style) for Minecraft 26.1.x");
+        logDirect("AutoMine 1.1.0 (Baritone-style) for Minecraft 26.1.x");
     }
 }

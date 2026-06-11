@@ -31,6 +31,8 @@ public final class CommandManager {
         register(new InvertCommand());
         register(new SetCommand());
         register(new ExploreCommand());
+        register(new FindCommand());
+        register(new FindBiomeCommand());
         register(new VersionCommand());
         // Known Baritone commands not yet fully implemented — registered so #help lists them
         // and they give a clear message instead of leaking to chat.
