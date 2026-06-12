@@ -56,8 +56,13 @@ public final class BlockBreaker {
 
         BlockPos hitPos = hit.getBlockPos();
         Direction face = hit.getDirection();
-        if (mc.level.getBlockState(hitPos).isAir()) {
+        net.minecraft.world.level.block.state.BlockState state = mc.level.getBlockState(hitPos);
+        if (state.isAir()) {
             return null;
+        }
+        // Auto-swap to the best tool for this block (pickaxe/shovel/axe/..., or fists).
+        if (com.automine.AutoMineMod.settings().autoTool) {
+            ToolSelector.selectBestTool(mc, state);
         }
         // continueDestroyBlock auto-starts on a new target and advances destroy progress each tick.
         mc.gameMode.continueDestroyBlock(hitPos, face);

@@ -2,10 +2,12 @@ package com.automine.process;
 
 import com.automine.AutoMineMod;
 import com.automine.control.BlockBreaker;
+import com.automine.goals.GoalBlock;
 import com.automine.goals.GoalNear;
 import com.automine.utils.Helper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -22,6 +24,7 @@ public final class MineProcess {
     private static final int SCAN_RADIUS = 32;
     private static final int SCAN_INTERVAL_TICKS = 20;
     private static final double REACH = 4.5;
+    private static final double DROP_RANGE = 16.0;
 
     private final Set<Block> targets = new HashSet<>();
     private boolean active;
@@ -76,15 +79,44 @@ public final class MineProcess {
             // tunnelling straight to the ore (and gravity carries us down as we dig).
             AutoMineMod.pathing().cancel();
             BlockBreaker.mineTowards(mc, currentTarget);
-        } else {
-            // Too far to reach: pathfind toward it. The path's movements break blocks en route,
-            // so it tunnels through anything in the way until the ore comes within reach.
-            if (!(AutoMineMod.pathing().getGoal() instanceof GoalNear g)
-                    || g.x != currentTarget.getX() || g.y != currentTarget.getY() || g.z != currentTarget.getZ()) {
-                AutoMineMod.pathing().setGoalAndPath(
-                        new GoalNear(currentTarget.getX(), currentTarget.getY(), currentTarget.getZ(), 1));
+            return;
+        }
+
+        // Not in reach to mine: collect any dropped items first so we don't leave them behind,
+        // then resume walking to the ore. Items auto-collect once we path onto them.
+        if (AutoMineMod.settings().mineCollectDrops) {
+            ItemEntity drop = nearestDrop(mc, DROP_RANGE);
+            if (drop != null && mc.player.distanceToSqr(drop) > 2.0) {
+                BlockPos dp = drop.blockPosition();
+                if (!(AutoMineMod.pathing().getGoal() instanceof GoalBlock gb)
+                        || gb.x != dp.getX() || gb.y != dp.getY() || gb.z != dp.getZ()) {
+                    AutoMineMod.pathing().setGoalAndPath(new GoalBlock(dp));
+                }
+                return;
             }
         }
+
+        // Too far to reach: pathfind toward the ore. The path's movements break blocks en route,
+        // so it tunnels through anything in the way until the ore comes within reach.
+        if (!(AutoMineMod.pathing().getGoal() instanceof GoalNear g)
+                || g.x != currentTarget.getX() || g.y != currentTarget.getY() || g.z != currentTarget.getZ()) {
+            AutoMineMod.pathing().setGoalAndPath(
+                    new GoalNear(currentTarget.getX(), currentTarget.getY(), currentTarget.getZ(), 1));
+        }
+    }
+
+    private ItemEntity nearestDrop(Minecraft mc, double range) {
+        var box = mc.player.getBoundingBox().inflate(range);
+        ItemEntity best = null;
+        double bestSq = Double.MAX_VALUE;
+        for (ItemEntity e : mc.level.getEntitiesOfClass(ItemEntity.class, box)) {
+            double d = e.distanceToSqr(mc.player);
+            if (d < bestSq) {
+                bestSq = d;
+                best = e;
+            }
+        }
+        return best;
     }
 
     private BlockPos findNearest(Minecraft mc) {

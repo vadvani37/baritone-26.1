@@ -26,8 +26,14 @@ public final class Settings {
     /** How close (blocks) follow/come tries to get. */
     public int followRadius = 3;
 
-    /** Render the active path. */
+    /** Render the active path (as a particle trail). */
     public boolean renderPath = true;
+
+    /** Auto-swap to the best tool for the block being mined (fists if none helps). */
+    public boolean autoTool = true;
+
+    /** While mining, walk over to and collect dropped items. */
+    public boolean mineCollectDrops = true;
 
     private final Map<String, java.lang.reflect.Field> byName = new LinkedHashMap<>();
 

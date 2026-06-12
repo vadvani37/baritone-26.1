@@ -46,6 +46,7 @@ public final class AutoMineMod implements ClientModInitializer {
             mineProcess.onTick();
             followProcess.onTick();
             pathing.onTick();
+            com.automine.render.PathRenderer.onClientTick(client);
         });
 
         // Intercept `#` commands from both the chat box and the command box.
