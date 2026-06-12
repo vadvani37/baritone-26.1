@@ -67,8 +67,23 @@ public final class MineProcess {
         }
         tickCounter++;
 
+        // PRIORITY: sweep up dropped items the moment they're beyond vanilla's auto-pickup range
+        // (~1.5 blocks). Checked BEFORE mining, otherwise the next in-reach ore always wins and the
+        // drops we made at arm's length never get collected — which is exactly the bug.
+        if (AutoMineMod.settings().mineCollectDrops) {
+            ItemEntity drop = nearestDrop(mc, DROP_RANGE);
+            if (drop != null && mc.player.distanceTo(drop) > 1.6) {
+                BlockPos dp = drop.blockPosition();
+                if (!(AutoMineMod.pathing().getGoal() instanceof GoalBlock gb)
+                        || gb.x != dp.getX() || gb.y != dp.getY() || gb.z != dp.getZ()) {
+                    AutoMineMod.pathing().setGoalAndPath(new GoalBlock(dp));
+                }
+                return; // go grab it, then mining resumes next pass
+            }
+        }
+
         if (currentTarget == null) {
-            return; // nothing in range; keep scanning
+            return; // nothing to mine; keep scanning
         }
 
         double dist = mc.player.getEyePosition(1.0f)
@@ -80,20 +95,6 @@ public final class MineProcess {
             AutoMineMod.pathing().cancel();
             BlockBreaker.mineTowards(mc, currentTarget);
             return;
-        }
-
-        // Not in reach to mine: collect any dropped items first so we don't leave them behind,
-        // then resume walking to the ore. Items auto-collect once we path onto them.
-        if (AutoMineMod.settings().mineCollectDrops) {
-            ItemEntity drop = nearestDrop(mc, DROP_RANGE);
-            if (drop != null && mc.player.distanceToSqr(drop) > 2.0) {
-                BlockPos dp = drop.blockPosition();
-                if (!(AutoMineMod.pathing().getGoal() instanceof GoalBlock gb)
-                        || gb.x != dp.getX() || gb.y != dp.getY() || gb.z != dp.getZ()) {
-                    AutoMineMod.pathing().setGoalAndPath(new GoalBlock(dp));
-                }
-                return;
-            }
         }
 
         // Too far to reach: pathfind toward the ore. The path's movements break blocks en route,
